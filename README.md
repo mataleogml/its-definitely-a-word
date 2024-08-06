@@ -14,7 +14,7 @@ This project provides a user-friendly interface for Scrabble players to quickly 
 
 ## Usage
 
-1. Open the `index.html` file in a web browser.
+1. Open the `index.html` file in a web browser or visit https://mataleogml.github.io/its-definitely-a-word/
 2. Enter a word in the text field.
 3. Click the "Check Word" button.
 4. The result will be displayed, indicating whether the word is valid or not.
@@ -25,12 +25,6 @@ This project provides a user-friendly interface for Scrabble players to quickly 
 - CSS (Material Design Lite)
 - JavaScript
 
-
-## Future Improvements
-
-- Implement the word-checking functionality using JavaScript
-- Add a backend API for more robust word validation
-- Include word definitions and usage examples
 
 ## Inspiration
 
