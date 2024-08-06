@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Checker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+        }
+        input, button {
+            font-size: 18px;
+            margin: 10px;
+            padding: 5px;
+        }
+        #result {
+            font-size: 24px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Its Definitely A Word</h1>
+        <input type="text" id="wordInput" placeholder="Enter a word">
+        <button onclick="checkWord()">Is it really?</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        let dictionary = [];
+
+        // Load the dictionary when the page loads
+        fetch('dictionary.txt')
+            .then(response => response.text())
+            .then(text => {
+                dictionary = text.split('\n').map(word => word.trim().toUpperCase());
+            });
+
+        function checkWord() {
+            const word = document.getElementById('wordInput').value.toUpperCase();
+            const result = document.getElementById('result');
+            
+            if (dictionary.includes(word)) {
+                result.textContent = `"${word}" is a valid word!`;
+                result.style.color = 'green';
+            } else {
+                const closestWord = findClosestWord(word);
+                result.innerHTML = `"${word}" is not a valid word.<br>Do you mean "${closestWord}"?`;
+                result.style.color = 'red';
+            }
+        }
+
+        function findClosestWord(word) {
+            let closestWord = '';
+            let minDistance = Infinity;
+
+            for (let dictWord of dictionary) {
+                const distance = levenshteinDistance(word, dictWord);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestWord = dictWord;
+                }
+            }
+
+            return closestWord;
+        }
+
+        function levenshteinDistance(a, b) {
+            if (a.length === 0) return b.length;
+            if (b.length === 0) return a.length;
+
+            const matrix = [];
+
+            // Increment along the first column of each row
+            for (let i = 0; i <= b.length; i++) {
+                matrix[i] = [i];
+            }
+
+            // Increment each column in the first row
+            for (let j = 0; j <= a.length; j++) {
+                matrix[0][j] = j;
+            }
+
+            // Fill in the rest of the matrix
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                        matrix[i][j] = matrix[i - 1][j - 1];
+                    } else {
+                        matrix[i][j] = Math.min(
+                            matrix[i - 1][j - 1] + 1, // substitution
+                            Math.min(
+                                matrix[i][j - 1] + 1, // insertion
+                                matrix[i - 1][j] + 1  // deletion
+                            )
+                        );
+                    }
+                }
+            }
+
+            return matrix[b.length][a.length];
+        }
+    </script>
+</body>
+</html>
