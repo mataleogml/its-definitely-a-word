@@ -1,3 +1,54 @@
 # Its Definitely A Word
 
-Jake's idea to create a scrabble word searcher
+A simple web-based Scrabble word checker to verify if a word is valid or not.
+
+## Description
+
+This project provides a user-friendly interface for Scrabble players to quickly check if a word is acceptable according to the Scrabble dictionary. Users can enter a word, and the application will inform them whether it's a valid Scrabble word or not.
+
+## Features
+
+- Clean and intuitive user interface
+- Real-time word validation
+- Mobile-responsive design using Material Design Lite (MDL)
+
+## Usage
+
+1. Open the `index.html` file in a web browser.
+2. Enter a word in the text field.
+3. Click the "Check Word" button.
+4. The result will be displayed, indicating whether the word is valid or not.
+
+## Technologies Used
+
+- HTML
+- CSS (Material Design Lite)
+- JavaScript (functionality to be implemented)
+
+## Installation
+
+1. Clone this repository:
+git clone https://github.com/yourusername/is-it-really-a-word.git
+Copy2. Open `index.html` in your preferred web browser.
+
+## Future Improvements
+
+- Implement the word-checking functionality using JavaScript
+- Add a backend API for more robust word validation
+- Include word definitions and usage examples
+
+## Inspiration
+
+The idea for this project was inspired by Jake Aicher.
+
+## License
+
+[MIT License](LICENSE)
+
+## Contributing
+
+Contributions, issues, and feature requests are welcome. Feel free to check [issues page](https://github.com/yourusername/is-it-really-a-word/issues) if you want to contribute.
+
+## Author
+
+[Your Name]
