@@ -23,13 +23,8 @@ This project provides a user-friendly interface for Scrabble players to quickly 
 
 - HTML
 - CSS (Material Design Lite)
-- JavaScript (functionality to be implemented)
+- JavaScript
 
-## Installation
-
-1. Clone this repository:
-git clone https://github.com/yourusername/is-it-really-a-word.git
-Copy2. Open `index.html` in your preferred web browser.
 
 ## Future Improvements
 
