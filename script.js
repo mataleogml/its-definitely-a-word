@@ -1,189 +1,208 @@
 const dictionary = new Set();
+let meaningData = {};
 let apiKey = localStorage.getItem('gpt4ApiKey');
-const settingsDialog = document.getElementById('settingsDialog');
-const loadingIndicator = document.getElementById('loadingIndicator');
-const debugLogs = document.getElementById('debugLogs');
-const resultDiv = document.getElementById('result');
-const suggestionsDiv = document.getElementById('suggestions');
-const mainTitle = document.getElementById('mainTitle');
+const elements = {
+    settingsDialog: document.getElementById('settingsDialog'),
+    loadingIndicator: document.getElementById('loadingIndicator'),
+    debugLogs: document.getElementById('debugLogs'),
+    resultDiv: document.getElementById('result'),
+    suggestionsDiv: document.getElementById('suggestions'),
+    mainTitle: document.getElementById('mainTitle'),
+    scoreCard: document.getElementById('scoreCard'),
+    relatedWords: document.getElementById('relatedWords'),
+    wordInput: document.getElementById('wordInput'),
+    dictionarySelection: document.getElementById('dictionarySelection'),
+    debugToggle: document.getElementById('debugToggle'),
+    bullshitToggle: document.getElementById('bullshitToggle'),
+    apiKeyInput: document.getElementById('apiKeyInput'),
+    saveApiKeyButton: document.getElementById('saveApiKeyButton'),
+    apiKeyBadge: document.getElementById('apiKeyBadge')
+};
 let isDebugMode = localStorage.getItem('debugMode') === 'true';
 let isBullshitMode = localStorage.getItem('bullshitMode') === 'true';
+let selectedDictionary = localStorage.getItem('selectedDictionary') || 'scrabble-us';
 
-// Fetch dictionary when the page loads
-fetchDictionary();
+(async function init() {
+    await Promise.all([fetchDictionary(), fetchMeaningData()]);
+    addEventListeners();
+    initializeSettings();
+})();
 
-// Add event listeners
-document.getElementById('searchButton').addEventListener('click', searchWord);
-document.getElementById('wordInput').addEventListener('keyup', function (event) {
-    if (event.key === 'Enter') {
-        searchWord();
-    }
-});
-document.getElementById('debugToggle').addEventListener('change', toggleDebugMode);
-document.getElementById('bullshitToggle').addEventListener('change', toggleBullshitMode);
-document.getElementById('settingsButton').addEventListener('click', () => settingsDialog.open = true);
-document.getElementById('closeDialogButton').addEventListener('click', () => settingsDialog.open = false);
-document.getElementById('saveApiKeyButton').addEventListener('click', saveApiKey);
+function addEventListeners() {
+    document.getElementById('searchButton').addEventListener('click', searchWord);
+    elements.wordInput.addEventListener('keyup', e => e.key === 'Enter' && searchWord());
+    elements.debugToggle.addEventListener('change', e => toggleMode('debugMode', e.target.checked));
+    elements.bullshitToggle.addEventListener('change', e => {
+        toggleMode('bullshitMode', e.target.checked);
+        updateApiKeyUI();
+    });
+    document.getElementById('settingsButton').addEventListener('click', () => elements.settingsDialog.open = true);
+    document.getElementById('closeDialogButton').addEventListener('click', () => elements.settingsDialog.open = false);
+    elements.saveApiKeyButton.addEventListener('click', saveApiKey);
+    elements.apiKeyInput.addEventListener('input', updateSaveButtonState);
+    elements.dictionarySelection.addEventListener('change', updateDictionarySelection);
+}
 
-// Initialize settings
-document.getElementById('debugToggle').checked = isDebugMode;
-document.getElementById('bullshitToggle').checked = isBullshitMode;
-debugLogs.style.display = isDebugMode ? 'block' : 'none';
+function initializeSettings() {
+    elements.debugToggle.checked = isDebugMode;
+    elements.bullshitToggle.checked = isBullshitMode;
+    elements.debugLogs.style.display = isDebugMode ? 'block' : 'none';
+    elements.dictionarySelection.value = selectedDictionary;
+    updateApiKeyUI();
+}
 
 function log(message) {
-    console.log(message); // Always log to console for debugging
+    console.log(message);
     if (isDebugMode) {
         const timestamp = new Date().toISOString();
-        debugLogs.textContent += `[${timestamp}] ${message}\n`;
-        debugLogs.scrollTop = debugLogs.scrollHeight;
+        elements.debugLogs.textContent += `[${timestamp}] ${message}\n`;
+        elements.debugLogs.scrollTop = elements.debugLogs.scrollHeight;
     }
 }
 
-function toggleDebugMode(event) {
-    isDebugMode = event.target.checked;
-    localStorage.setItem('debugMode', isDebugMode);
-    debugLogs.style.display = isDebugMode ? 'block' : 'none';
-    log('Debug mode ' + (isDebugMode ? 'enabled' : 'disabled'));
+function toggleMode(mode, value) {
+    if (mode === 'debugMode') isDebugMode = value;
+    else if (mode === 'bullshitMode') isBullshitMode = value;
+    localStorage.setItem(mode, value);
+    if (mode === 'debugMode') {
+        elements.debugLogs.style.display = isDebugMode ? 'block' : 'none';
+    }
+    log(`${mode} ${value ? 'enabled' : 'disabled'}`);
 }
 
-function toggleBullshitMode(event) {
-    isBullshitMode = event.target.checked;
-    localStorage.setItem('bullshitMode', isBullshitMode);
-    log('Bullshit mode ' + (isBullshitMode ? 'enabled' : 'disabled'));
+function updateApiKeyUI() {
+    elements.apiKeyInput.disabled = !isBullshitMode;
+    elements.saveApiKeyButton.disabled = !isBullshitMode || !elements.apiKeyInput.value;
+    elements.apiKeyBadge.style.display = apiKey ? 'inline-block' : 'none';
+}
+
+function updateSaveButtonState() {
+    elements.saveApiKeyButton.disabled = !isBullshitMode || !elements.apiKeyInput.value || elements.apiKeyInput.value === apiKey;
+}
+
+async function updateDictionarySelection() {
+    selectedDictionary = elements.dictionarySelection.value;
+    localStorage.setItem('selectedDictionary', selectedDictionary);
+    log(`Dictionary changed to: ${selectedDictionary}`);
+    await fetchDictionary();
+}
+
+async function fetchData(url, errorMessage) {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.text();
+    } catch (error) {
+        console.error(`Error loading ${url}:`, error);
+        log(`Error loading ${url}: ${error.message}`);
+        mdui.snackbar({ message: errorMessage, timeout: 3000 });
+    }
 }
 
 async function fetchDictionary() {
-    log('Fetching dictionary...');
-    try {
-        const response = await fetch('dictionary.txt');
-        const text = await response.text();
-        const words = text.split('\n').map(word => word.trim().toLowerCase());
-        words.forEach(word => dictionary.add(word));
+    const dictionaryFile = selectedDictionary === 'scrabble-uk' ? 'dictionaryUK.txt' : 'dictionaryUS.txt';
+    const text = await fetchData(`/dictionary/${dictionaryFile}`, 'Failed to load dictionary. Some features may not work correctly.');
+    if (text) {
+        dictionary.clear();
+        text.split('\n').forEach(word => dictionary.add(word.trim().toLowerCase()));
         log(`Dictionary loaded successfully. Total words: ${dictionary.size}`);
-    } catch (error) {
-        console.error('Error loading dictionary:', error);
-        log('Error loading dictionary: ' + error.message);
-        mdui.snackbar({
-            message: 'Failed to load dictionary. Some features may not work correctly.',
-            timeout: 3000
-        });
+    }
+}
+
+async function fetchMeaningData() {
+    const data = await fetchData('meaning.json', 'Failed to load meaning data. Some features may not work correctly.');
+    if (data) {
+        meaningData = JSON.parse(data);
+        log('Meaning data loaded successfully.');
     }
 }
 
 async function searchWord() {
-    const input = document.getElementById('wordInput').value.trim().toLowerCase();
-
+    const input = elements.wordInput.value.trim().toLowerCase();
     if (input.length === 0 || input.length > 15 || /[\s-]/.test(input)) {
-        mdui.snackbar({
-            message: 'Please enter a valid word (max 15 letters, no spaces or hyphens).',
-            timeout: 2000
-        });
+        mdui.snackbar({ message: 'Please enter a valid word (max 15 letters, no spaces or hyphens).', timeout: 2000 });
         return;
     }
 
     log(`Searching for word: ${input}`);
-    loadingIndicator.style.display = 'block';
-    resultDiv.style.display = 'none';
-    suggestionsDiv.innerHTML = '';
-    suggestionsDiv.style.display = 'none';
+    elements.loadingIndicator.style.display = 'block';
+    elements.resultDiv.style.display = 'none';
+    elements.suggestionsDiv.innerHTML = '';
+    elements.suggestionsDiv.style.display = 'none';
 
-    const matchingWords = findMatchingWords(input);
-    if (matchingWords.length === 1) {
-        await lookupWord(matchingWords[0]);
-    } else if (matchingWords.length > 1) {
-        displaySuggestions(matchingWords);
-    } else {
-        // No matching words found
-        await lookupWord(input);
-    }
+    const matchingWords = Array.from(dictionary).filter(word => new RegExp(`^${input.replace(/\?/g, '.')}$`).test(word));
+    if (matchingWords.length === 1) await lookupWord(matchingWords[0]);
+    else if (matchingWords.length > 1) displaySuggestions(matchingWords);
+    else await lookupWord(input);
 
-    loadingIndicator.style.display = 'none';
-}
-
-function findMatchingWords(pattern) {
-    const regex = new RegExp('^' + pattern.replace(/\?/g, '.') + '$');
-    return Array.from(dictionary).filter(word => regex.test(word));
+    elements.loadingIndicator.style.display = 'none';
 }
 
 function displaySuggestions(words) {
-    suggestionsDiv.innerHTML = '';
-    if (words.length === 0) {
-        suggestionsDiv.style.display = 'none';
-        return;
-    }
-
     words.forEach(word => {
         const chip = document.createElement('mdui-chip');
-        chip.textContent = word;
+        chip.textContent = toSentenceCase(word);
         chip.classList.add('suggestion-chip');
         chip.addEventListener('click', () => selectWord(word, chip));
-        suggestionsDiv.appendChild(chip);
+        elements.suggestionsDiv.appendChild(chip);
     });
-
-    suggestionsDiv.style.display = 'flex';
+    elements.suggestionsDiv.style.display = 'flex';
 }
 
 function selectWord(word, chip) {
-    // Remove 'elevated' attribute from all chips
-    suggestionsDiv.querySelectorAll('mdui-chip').forEach(c => c.removeAttribute('elevated'));
-    
-    // Add 'elevated' attribute to the selected chip
+    elements.suggestionsDiv.querySelectorAll('mdui-chip').forEach(c => c.removeAttribute('elevated'));
     chip.setAttribute('elevated', '');
-
     updateTitle(word);
     lookupWord(word);
 }
 
 async function lookupWord(word) {
     log(`Looking up word: ${word}`);
-    loadingIndicator.style.display = 'block';
-    resultDiv.style.display = 'none';
-    document.getElementById('relatedWords').style.display = 'none';
-    document.getElementById('scoreCard').style.display = 'none';
-    suggestionsDiv.style.display = 'none';
-
     updateTitle(word);
 
     let definition;
-    if (isBullshitMode) {
-        log('Bullshit mode enabled. Using GPT-4 API for definition.');
-        definition = await getGPT4Definition(word);
-    } else if (dictionary.has(word.toLowerCase())) {
-        log('Word found in Scrabble dictionary. Fetching meaning from JSON.');
-        definition = await fetchMeaningFromJson(word);
-        if (definition.error) {
-            definition = { error: `"${word}" is not a word.` };
-        }
+    if (dictionary.has(word.toLowerCase())) {
+        log('Word found in selected Scrabble dictionary.');
+        definition = meaningData[word.toUpperCase()] || generateRelatedWords(word);
     } else {
-        log('Word not found in dictionary.');
-        definition = { error: `"${word}" is not a word.` };
+        log('Word not found in selected dictionary.');
+        definition = { error: `"${word}" is not a word in the selected Scrabble dictionary.` };
     }
-    log(`Definition received: ${JSON.stringify(definition)}`);
 
+    if (isBullshitMode && (!definition || definition.error)) {
+        log('Bullshit mode enabled and word not found. Using GPT-4 API for definition.');
+        definition = await getGPT4Definition(word);
+    }
+
+    log(`Definition: ${JSON.stringify(definition)}`);
     displayDefinition(definition, word);
-    loadingIndicator.style.display = 'none';
+}
+
+function generateRelatedWords(word) {
+    log(`Generating related words for: ${word}`);
+    const relatedWords = new Set();
+    const lowerWord = word.toLowerCase();
+
+    for (const [key, value] of Object.entries(meaningData)) {
+        if (dictionary.has(key.toLowerCase())) {
+            const allRelated = [
+                ...(value.MEANINGS ? value.MEANINGS.flatMap(m => m[2] || []) : []),
+                ...(value.ANTONYMS || []),
+                ...(value.SYNONYMS || [])
+            ];
+            if (allRelated.some(w => w.toLowerCase() === lowerWord)) {
+                relatedWords.add(key);
+            }
+        }
+    }
+
+    log(`Generated related words: ${JSON.stringify([...relatedWords])}`);
+    return { MEANINGS: [], ANTONYMS: [], SYNONYMS: [...relatedWords] };
 }
 
 function updateTitle(word) {
-    mainTitle.textContent = `Is "${word}" really a word?`;
-    document.title = `Is "${word}" really a word?`;
-}
-
-async function fetchMeaningFromJson(word) {
-    log(`Fetching meaning for "${word}" from JSON`);
-    try {
-        const response = await fetch('meaning.json');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        log(`JSON data received for "${word}"`);
-        return data[word.toUpperCase()] || { error: "Meaning not found in JSON file." };
-    } catch (error) {
-        console.error('Error fetching meaning from JSON:', error);
-        log('Error fetching meaning from JSON: ' + error.message);
-        return { error: "Error fetching meaning from JSON file." };
-    }
+    elements.mainTitle.textContent = `Is "${toSentenceCase(word)}" really a word?`;
+    document.title = `Is "${toSentenceCase(word)}" really a word?`;
 }
 
 async function getGPT4Definition(word) {
@@ -216,9 +235,7 @@ async function getGPT4Definition(word) {
             }
         });
 
-        const definition = JSON.parse(response.data.choices[0].message.content.trim());
-        log(`Received definition from API: ${JSON.stringify(definition)}`);
-        return definition;
+        return JSON.parse(response.data.choices[0].message.content.trim());
     } catch (error) {
         console.error('Error:', error);
         log('Error fetching definition: ' + error.message);
@@ -226,35 +243,24 @@ async function getGPT4Definition(word) {
     }
 }
 
-function calculateScrabbleScore(word) {
-    const scoreMap = {
-        'a': 1, 'e': 1, 'i': 1, 'o': 1, 'u': 1, 'l': 1, 'n': 1, 's': 1, 't': 1, 'r': 1,
-        'd': 2, 'g': 2,
-        'b': 3, 'c': 3, 'm': 3, 'p': 3,
-        'f': 4, 'h': 4, 'v': 4, 'w': 4, 'y': 4,
-        'k': 5,
-        'j': 8, 'x': 8,
-        'q': 10, 'z': 10
-    };
-
-    return word.toLowerCase().split('').reduce((score, letter) => score + (scoreMap[letter] || 0), 0);
-}
-
 function displayDefinition(data, originalWord) {
     log(`Displaying definition for "${originalWord}": ${JSON.stringify(data)}`);
-    if (data.error) {
-        resultDiv.innerHTML = `<p>${data.error}</p>`;
-        resultDiv.style.display = 'block';
-        document.getElementById('relatedWords').style.display = 'none';
-        document.getElementById('scoreCard').style.display = 'none';
-        return;
+    
+    if (dictionary.has(originalWord.toLowerCase())) {
+        const score = originalWord.toLowerCase().split('').reduce((score, letter) => 
+            score + ({'a':1,'e':1,'i':1,'o':1,'u':1,'l':1,'n':1,'s':1,'t':1,'r':1,'d':2,'g':2,'b':3,'c':3,'m':3,'p':3,'f':4,'h':4,'v':4,'w':4,'y':4,'k':5,'j':8,'x':8,'q':10,'z':10}[letter] || 0), 0);
+        elements.scoreCard.innerHTML = `<h1>${score} points</h1>`;
+        elements.scoreCard.style.display = 'block';
+    } else {
+        elements.scoreCard.style.display = 'none';
     }
 
-    // Calculate and display the Scrabble score
-    const score = calculateScrabbleScore(originalWord);
-    const scoreCard = document.getElementById('scoreCard');
-    scoreCard.innerHTML = `<h1>${score} points</h1>`;
-    scoreCard.style.display = 'block';
+    if (data.error) {
+        elements.resultDiv.innerHTML = `<p>${data.error}</p>`;
+        elements.resultDiv.style.display = 'block';
+        elements.relatedWords.style.display = 'none';
+        return;
+    }
 
     let meaningsHtml = '';
     let relatedWordsHtml = '';
@@ -262,89 +268,66 @@ function displayDefinition(data, originalWord) {
     if (data.MEANINGS && data.MEANINGS.length > 0) {
         meaningsHtml += '<h3>Meanings:</h3>';
         data.MEANINGS.forEach(meaning => {
-            if (meaning[1]) {  // Only display if definition is not empty
-                meaningsHtml += `<p><strong>${meaning[0]}:</strong> ${meaning[1]}</p>`;
-            }
+            if (meaning[1]) meaningsHtml += `<p><strong>${meaning[0]}:</strong> ${meaning[1]}</p>`;
         });
     }
 
-    // Combine Related Words, Antonyms, and Synonyms
+    const formatWordChips = words => {
+        const uniqueWords = new Set(words.map(word => word.toLowerCase()));
+        const validWords = Array.from(uniqueWords)
+            .filter(word => dictionary.has(word) && word !== originalWord.toLowerCase())
+            .sort((a, b) => a.localeCompare(b));
+        return validWords.map(word => 
+            `<mdui-chip class="word-chip" onclick="lookupWordAndClearSuggestions('${word}')">${toSentenceCase(word)}</mdui-chip>`
+        ).join(' ');
+    };
+
+    const addRelatedSection = (title, words) => {
+        const validWords = formatWordChips(words);
+        if (validWords) {
+            relatedWordsHtml += `<h3>${title}:</h3><p>${validWords}</p>`;
+            return true;
+        }
+        return false;
+    };
+
     let hasRelatedContent = false;
-
     if (data.MEANINGS && data.MEANINGS.some(meaning => meaning[2] && meaning[2].length > 0)) {
-        relatedWordsHtml += '<h3>Related Words:</h3>';
-        data.MEANINGS.forEach(meaning => {
-            if (meaning[2] && meaning[2].length > 0) {
-                const validRelatedWords = formatWordChips(meaning[2], originalWord);
-                if (validRelatedWords) {
-                    relatedWordsHtml += `<p>${validRelatedWords}</p>`;
-                    hasRelatedContent = true;
-                }
-            }
-        });
+        hasRelatedContent |= addRelatedSection('Related Words', data.MEANINGS.flatMap(meaning => meaning[2] || []));
     }
+    hasRelatedContent |= addRelatedSection('Antonyms', data.ANTONYMS || []);
+    hasRelatedContent |= addRelatedSection('Synonyms', data.SYNONYMS || []);
 
-    if (data.ANTONYMS && data.ANTONYMS.length > 0) {
-        const validAntonyms = formatWordChips(data.ANTONYMS, originalWord);
-        if (validAntonyms) {
-            relatedWordsHtml += `<h3>Antonyms:</h3><p>${validAntonyms}</p>`;
-            hasRelatedContent = true;
-        }
-    }
-
-    if (data.SYNONYMS && data.SYNONYMS.length > 0) {
-        const validSynonyms = formatWordChips(data.SYNONYMS, originalWord);
-        if (validSynonyms) {
-            relatedWordsHtml += `<h3>Synonyms:</h3><p>${validSynonyms}</p>`;
-            hasRelatedContent = true;
-        }
-    }
-
-    resultDiv.innerHTML = meaningsHtml;
-    resultDiv.style.display = meaningsHtml ? 'block' : 'none';
-
-    const relatedWordsDiv = document.getElementById('relatedWords');
-    relatedWordsDiv.innerHTML = relatedWordsHtml;
-    relatedWordsDiv.style.display = hasRelatedContent ? 'block' : 'none';
+    elements.resultDiv.innerHTML = meaningsHtml || "<p>No definition available.</p>";
+    elements.resultDiv.style.display = 'block';
+    elements.relatedWords.innerHTML = relatedWordsHtml;
+    elements.relatedWords.style.display = hasRelatedContent ? 'block' : 'none';
 
     log(`Definition displayed for "${originalWord}"`);
 }
 
-function formatWordChips(words, originalWord) {
-    const validWords = words.filter(word => 
-        dictionary.has(word.toLowerCase()) && word.toLowerCase() !== originalWord.toLowerCase()
-    );
-
-    if (validWords.length === 0) return '';
-
-    return validWords.map(word => 
-        `<mdui-chip class="word-chip" onclick="lookupWordAndClearSuggestions('${word}')">${word}</mdui-chip>`
-    ).join(' ');
-}
-
 function lookupWordAndClearSuggestions(word) {
-    suggestionsDiv.innerHTML = '';
-    suggestionsDiv.style.display = 'none';
-    document.getElementById('wordInput').value = word;
+    elements.suggestionsDiv.innerHTML = '';
+    elements.suggestionsDiv.style.display = 'none';
+    elements.wordInput.value = word;
     lookupWord(word);
 }
 
 function saveApiKey() {
-    const inputApiKey = document.getElementById('apiKeyInput').value;
+    const inputApiKey = elements.apiKeyInput.value;
     if (inputApiKey) {
         apiKey = inputApiKey;
         localStorage.setItem('gpt4ApiKey', apiKey);
-        settingsDialog.open = false;
+        elements.settingsDialog.open = false;
+        updateApiKeyUI();
         log('API Key saved successfully');
-        mdui.snackbar({
-            message: 'API Key saved successfully!',
-            timeout: 2000
-        });
+        mdui.snackbar({ message: 'API Key saved successfully!', timeout: 2000 });
     } else {
         log('Invalid API Key entered');
-        mdui.snackbar({
-            message: 'Please enter a valid API Key.',
-            timeout: 2000
-        });
+        mdui.snackbar({ message: 'Please enter a valid API Key.', timeout: 2000 });
     }
+}
+
+function toSentenceCase(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
