@@ -48,6 +48,7 @@
             white-space: pre-wrap;
             max-height: 300px;
             overflow-y: auto;
+            margin-top: 20px;
         }
 
         .button-container {
@@ -110,77 +111,61 @@
 
 <body>
     <mdui-layout>
-        <mdui-navigation-rail value="recent" style="position: relative">
+        <mdui-navigation-rail style="position: absolute">
             <mdui-navigation-rail-item icon="book--outlined" value="recent">Dictionary</mdui-navigation-rail-item>
-            <!-- <mdui-navigation-rail-item icon="watch_later--outlined" value="history">History</mdui-navigation-rail-item>
-            <mdui-navigation-rail-item icon="checklist--outlined" value="list">List</mdui-navigation-rail-item> -->
-            <mdui-navigation-rail-item icon="settings--outlined" value="settings"
-                id="settingsButton">Settings</mdui-navigation-rail-item>
-
+            <mdui-navigation-rail-item icon="watch_later--outlined" value="history">History</mdui-navigation-rail-item>
+            <mdui-navigation-rail-item icon="settings--outlined" value="settings">Settings</mdui-navigation-rail-item>
         </mdui-navigation-rail>
 
         <mdui-layout-main class="layout-main" style="min-height: 100dvh">
 
 
-            <div class="container">
-                <div>
-                    <h1 id="mainTitle">Is it really a word?</h1>
-                </div>
-
-                <mdui-text-field icon="search" id="wordInput"
-                    helper="Enter a word (max 15 letters, use ? for wildcards)" clearable label="Enter a word"
-                    value=""></mdui-text-field>
-                <div class="button-container">
-                    <mdui-button id="searchButton" variant="filled">Search</mdui-button>
-                </div>
+            <div id="dictionaryPage" class="container">
+                <h1 id="headline">Is it really a word?</h1>
+                
+                <mdui-text-field icon="search" id="wordInput" helper="Enter a word (max 15 letters, use ? for wildcards)" clearable label="Enter a word" value=""></mdui-text-field>
+                <!---<div class="button-container"><mdui-button id="searchButton" variant="filled">Search</mdui-button></div>--->
 
                 <div id="suggestions"></div>
 
-                <div id="loadingIndicator">
-                    <mdui-circular-progress></mdui-circular-progress>
-                </div>
+                <div id="loadingIndicator"><mdui-circular-progress></mdui-circular-progress></div>
 
                 <mdui-card variant="elevated" id="scoreCard" class="mdui-typo"></mdui-card>
                 <mdui-card variant="elevated" id="result" class="mdui-typo"></mdui-card>
                 <mdui-card variant="elevated" id="relatedWords" class="mdui-typo"></mdui-card>
-                <mdui-card variant="elevated" id="synonyms" class="mdui-typo"></mdui-card>
                 <mdui-card variant="elevated" id="debugLogs"></mdui-card>
             </div>
 
-            <mdui-dialog close-on-esc close-on-overlay-click id="settingsDialog">
-                <div class="settings-content">
-                    <h2 slot="headline">Settings</h2>
-                    <h3>Dictionary Selection</h3>
-                    <mdui-segmented-button-group id="dictionarySelection" selects="single" value="scrabble-us">
-                        <mdui-segmented-button value="scrabble-us">Scrabble US (TWL)</mdui-segmented-button>
-                        <mdui-segmented-button value="scrabble-uk">Scrabble UK (Collins/SOWPODS)</mdui-segmented-button>
-                    </mdui-segmented-button-group>
+            <div id="historyPage" class="container" style="display: none;">
+                <h1 slot="headline">Search History</h1>
+                <mdui-button icon="delete--outlined" variant="tonal" id="clearHistoryButton">Clear History</mdui-button>
+                <mdui-list id="historyList"></mdui-list>
+            </div>
 
-                    <h3>Debug Mode</h3>
-                    <mdui-switch id="debugToggle"></mdui-switch>
+            <div id="settingsPage" class="container" style="display: none;">
+                <h1 slot="headline">Settings</h2>
+                <h3>Dictionary Selection</h3>
+                <mdui-segmented-button-group id="dictionarySelection" selects="single" value="scrabble-us">
+                    <mdui-segmented-button value="scrabble-us">Scrabble US (TWL)</mdui-segmented-button>
+                    <mdui-segmented-button value="scrabble-uk">Scrabble UK (Collins/SOWPODS)</mdui-segmented-button>
+                </mdui-segmented-button-group>
 
-                    <h3>Bullshit Mode</h3>
-                    <mdui-switch id="bullshitToggle"></mdui-switch>
+                <h3>Debug Mode</h3>
+                <mdui-switch id="debugToggle"></mdui-switch>
 
-                    <h4>API Key <mdui-badge id="apiKeyBadge">Active Key</mdui-badge></h4>
-                    <mdui-text-field id="apiKeyInput" label="Enter API Key"></mdui-text-field>
-                    <mdui-button id="saveApiKeyButton">Save</mdui-button>
-                </div>
-                <mdui-button slot="action" variant="text" id="closeDialogButton">Close</mdui-button>
-            </mdui-dialog>
+                <h3>Bullshit Mode</h3>
+                <mdui-switch id="bullshitToggle"></mdui-switch>
 
-            <mdui-dialog close-on-esc close-on-overlay-click id="historyDialog">
-                <div class="history-content">
-                    <h2 slot="headline">Search History</h2>
-                    <ul id="historyList" class="mdui-list"></ul>
-                    <mdui-button id="clearHistoryButton">Clear History</mdui-button>
-                </div>
-                <mdui-button slot="action" variant="text" id="closeHistoryDialogButton">Close</mdui-button>
-            </mdui-dialog>
+                <h4>API Key <mdui-badge id="apiKeyBadge">Active Key</mdui-badge></h4>
+                <mdui-text-field id="apiKeyInput" label="Enter API Key"></mdui-text-field>
+                <mdui-button id="saveApiKeyButton">Save</mdui-button>
+            </div>
+
+
 
             <script type="module" src="/scripts/interface.js"></script>
             <script type="module" src="/scripts/script.js"></script>
-            <!-- <script type="module" src="/scripts/history.js"></script> -->
+            <script type="module" src="/scripts/history.js"></script>
 
         </mdui-layout-main>
     </mdui-layout>
