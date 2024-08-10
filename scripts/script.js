@@ -67,7 +67,7 @@ const fetchData = async (url, errorMessage) => {
 
 const fetchDictionary = async () => {
     const dictionaryFile = selectedDictionary === 'scrabble-uk' ? 'dictionaryUK.txt' : 'dictionaryUS.txt';
-    const text = await fetchData(`https://mataleogml.github.io/its-definitely-a-word/${dictionaryFile}`, 'Failed to load dictionary. Some features may not work correctly.');
+    const text = await fetchData(`https://mataleogml.github.io/its-definitely-a-word/dictionary/${dictionaryFile}`, 'Failed to load dictionary. Some features may not work correctly.');
     if (text) {
         dictionary.clear();
         text.split('\n').forEach(word => dictionary.add(word.trim().toLowerCase()));
@@ -76,7 +76,7 @@ const fetchDictionary = async () => {
 };
 
 const fetchMeaningData = async () => {
-    const data = await fetchData('/dictionary/meaning.json', 'Failed to load meaning data. Some features may not work correctly.');
+    const data = await fetchData('https://mataleogml.github.io/its-definitely-a-word/dictionary/meaning.json', 'Failed to load meaning data. Some features may not work correctly.');
     if (data) {
         meaningData = JSON.parse(data);
         log('Meaning data loaded successfully.');
