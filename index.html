@@ -7,6 +7,7 @@
     <title>Is it really a word?</title>
     <link rel="stylesheet" href="https://unpkg.com/mdui@2/mdui.css">
     <script src="https://unpkg.com/mdui@2/mdui.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.3.4/axios.min.js"></script>
     <style>
         body {
             display: flex;
@@ -22,11 +23,14 @@
             padding: 20px;
         }
 
-        #result {
+        #result,
+        #scoreCard,
+        #relatedWords {
             display: none;
             margin-top: 20px;
-            padding: 10px;
-
+            padding-left: 16px;
+            padding-right: 16px;
+            padding-top: 0px;
         }
 
         #loadingIndicator {
@@ -37,9 +41,7 @@
 
         #debugLogs {
             display: none;
-            margin-top: 20px;
             padding: 10px;
-
             font-family: monospace;
             white-space: pre-wrap;
             max-height: 300px;
@@ -49,8 +51,24 @@
         .button-container {
             display: flex;
             gap: 1%;
-            margin-top: 10px;
-            margin-bottom: 40px;
+            margin-top: 20px;
+        }
+
+        #suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        #suggestions:empty {
+            display: none;
+        }
+
+        .suggestion-chip,
+        .word-chip {
+            cursor: pointer;
+            margin: 5px;
         }
     </style>
 </head>
@@ -58,20 +76,26 @@
 <body>
     <div class="container">
         <div>
-            <h1>Is it really a word?</h1>
+            <h1 id="mainTitle">Is it really a word?</h1>
         </div>
 
-        <mdui-text-field id="wordInput" clearable label="Enter a word" value=""></mdui-text-field>
+        <mdui-text-field id="wordInput" clearable label="Enter a word (max 15 letters, use ? for wildcards)"
+            value=""></mdui-text-field>
         <div class="button-container">
             <mdui-button id="searchButton" variant="filled">Search</mdui-button>
             <mdui-button id="settingsButton" variant="text">Settings</mdui-button>
         </div>
 
+        <div id="suggestions"></div>
+
         <div id="loadingIndicator">
             <mdui-circular-progress></mdui-circular-progress>
         </div>
 
+        <mdui-card variant="elevated" id="scoreCard" class="mdui-typo"></mdui-card>
         <mdui-card variant="elevated" id="result" class="mdui-typo"></mdui-card>
+        <mdui-card variant="elevated" id="relatedWords" class="mdui-typo"></mdui-card>
+        <mdui-card variant="elevated" id="synonyms" class="mdui-typo"></mdui-card>
         <mdui-card variant="elevated" id="debugLogs"></mdui-card>
     </div>
 
@@ -85,149 +109,14 @@
             </div>
             <h3>Toggle Debug Mode</h3>
             <mdui-checkbox id="debugToggle" style="margin-bottom: 30px">Debug Mode</mdui-checkbox>
+            <h3>Toggle Bullshit Mode</h3>
+            <mdui-checkbox id="bullshitToggle" style="margin-bottom: 30px">Bullshit Mode</mdui-checkbox>
             <br>
             <mdui-button full-width id="closeDialogButton" variant="tonal">Close Settings</mdui-button>
         </div>
     </mdui-dialog>
 
-    <script>
-        const dictionary = new Set();
-        let apiKey = localStorage.getItem('gpt4ApiKey');
-        const settingsDialog = document.getElementById('settingsDialog');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        const debugLogs = document.getElementById('debugLogs');
-        const resultDiv = document.getElementById('result');
-        let isDebugMode = false;
-
-        // Fetch dictionary when the page loads
-        fetchDictionary();
-
-        // Add event listeners
-        document.getElementById('searchButton').addEventListener('click', searchWord);
-        document.getElementById('wordInput').addEventListener('keyup', function (event) {
-            if (event.key === 'Enter') {
-                searchWord();
-            }
-        });
-        document.getElementById('debugToggle').addEventListener('change', toggleDebugMode);
-        document.getElementById('settingsButton').addEventListener('click', () => settingsDialog.open = true);
-        document.getElementById('closeDialogButton').addEventListener('click', () => settingsDialog.open = false);
-        document.getElementById('saveApiKeyButton').addEventListener('click', saveApiKey);
-
-        function log(message) {
-            if (isDebugMode) {
-                const timestamp = new Date().toISOString();
-                debugLogs.textContent += `[${timestamp}] ${message}\n`;
-                debugLogs.scrollTop = debugLogs.scrollHeight;
-            }
-        }
-
-        function toggleDebugMode(event) {
-            isDebugMode = event.target.checked;
-            debugLogs.style.display = isDebugMode ? 'block' : 'none';
-            log('Debug mode ' + (isDebugMode ? 'enabled' : 'disabled'));
-        }
-
-        async function fetchDictionary() {
-            log('Fetching dictionary...');
-            try {
-                const response = await fetch('https://raw.githubusercontent.com/mataleogml/its-definitely-a-word/main/dictionary.txt');
-                const text = await response.text();
-                const words = text.split('\n').map(word => word.trim().toLowerCase());
-                words.forEach(word => dictionary.add(word));
-                log(`Dictionary loaded successfully. Total words: ${dictionary.size}`);
-            } catch (error) {
-                console.error('Error loading dictionary:', error);
-                log('Error loading dictionary: ' + error.message);
-                mdui.snackbar({
-                    message: 'Failed to load dictionary. Some features may not work correctly.',
-                    timeout: 3000
-                });
-            }
-        }
-
-        async function searchWord() {
-            const word = document.getElementById('wordInput').value.trim().toLowerCase();
-
-            if (word.length === 0) {
-                mdui.snackbar({
-                    message: 'Please enter a word.',
-                    timeout: 2000
-                });
-                return;
-            }
-
-            log(`Searching for word: ${word}`);
-            loadingIndicator.style.display = 'block';
-            resultDiv.style.display = 'none';
-
-            let definition;
-            if (!apiKey) {
-                log('No API key set. Using local dictionary check.');
-                definition = dictionary.has(word) ? "This is a valid word" : "This is not a valid word";
-            } else {
-                definition = await getGPT4Definition(word);
-            }
-
-            resultDiv.innerHTML = definition;
-            loadingIndicator.style.display = 'none';
-            resultDiv.style.display = 'block';
-        }
-
-        async function getGPT4Definition(word) {
-            const prompt = `Define the word ${word} in a sentence dictionary style. If you do not have existing knowledge for this word, create meaning for this fictional word. Write the definition in dictionary style in a short sentence. If the word received is a phrase, directly output This is not a valid word instead.`;
-
-            log(`Sending prompt to GPT-4 API: "${prompt}"`);
-
-            try {
-                const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: JSON.stringify({
-                        model: "gpt-4",
-                        messages: [{ "role": "user", "content": prompt }],
-                        max_tokens: 100
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error('API request failed');
-                }
-
-                const data = await response.json();
-                const definition = data.choices[0].message.content.trim();
-                log(`Received definition from API: "${definition}"`);
-                return definition;
-            } catch (error) {
-                console.error('Error:', error);
-                log('Error fetching definition: ' + error.message);
-                return "An error occurred while fetching the definition. Please check your API key and try again.";
-            }
-        }
-
-        function saveApiKey() {
-            const inputApiKey = document.getElementById('apiKeyInput').value;
-            if (inputApiKey) {
-                apiKey = inputApiKey;
-                localStorage.setItem('gpt4ApiKey', apiKey);
-                settingsDialog.open = false;
-                log('API Key saved successfully');
-                mdui.snackbar({
-                    message: 'API Key saved successfully!',
-                    timeout: 2000
-                });
-            } else {
-                log('Invalid API Key entered');
-                mdui.snackbar({
-                    message: 'Please enter a valid API Key.',
-                    timeout: 2000
-                });
-            }
-        }
-    </script>
+    <script src="script.js"></script>
 </body>
 
 </html>
