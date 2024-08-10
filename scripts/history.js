@@ -25,6 +25,15 @@ export const initializeHistory = () => {
     updateHistoryList(searchHistory);
 };
 
+export const removeFromHistory = (word) => {
+    const history = JSON.parse(localStorage.getItem('searchHistory')) || [];
+    const updatedHistory = history.filter(item => item !== word);
+    localStorage.setItem('searchHistory', JSON.stringify(updatedHistory));
+    updateHistoryList(updatedHistory);
+};
+
+window.removeFromHistory = removeFromHistory;
+
 // Initialize the history when the page loads
 document.addEventListener('DOMContentLoaded', initializeHistory);
 

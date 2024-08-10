@@ -16,7 +16,7 @@ export const elements = {
     apiKeyBadge: null,
     clearHistoryButton: null,
     historyList: null,
-    searchButton: null,
+    // searchButton: null,
     navigationRail: null,
     dictionaryPage: null,
     historyPage: null,
@@ -40,7 +40,7 @@ const initializeElements = () => {
     elements.apiKeyBadge = document.querySelector('#apiKeyBadge');
     elements.clearHistoryButton = document.querySelector('#clearHistoryButton');
     elements.historyList = document.querySelector('#historyList');
-    elements.searchButton = document.querySelector('#searchButton');
+    //elements.searchButton = document.querySelector('#searchButton');
     elements.navigationRail = document.querySelector('mdui-navigation-rail');
     elements.dictionaryPage = document.querySelector('#dictionaryPage');
     elements.historyPage = document.querySelector('#historyPage');
@@ -125,6 +125,12 @@ const selectWord = (word) => {
 const searchAndAddToHistory = async (word) => {
     if (!word.trim()) {
         console.log('Empty word, not searching or adding to history');
+        return;
+    }
+    
+    if (word.includes('?')) {
+        console.log('Wildcard query, not adding to history');
+        await window.searchWord(word);
         return;
     }
     
@@ -242,13 +248,23 @@ export const updateHistoryList = (history) => {
             if (index === 0) {
                 listItem.setAttribute('description', 'Most recent');
             }
+            //listItem.setAttribute('icon', 'book--outlined');
+            //listItem.setAttribute('end-icon', 'delete--outlined');
             listItem.setAttribute('rounded', '');
-            listItem.addEventListener('click', () => {
-                if (elements.wordInput) elements.wordInput.value = word;
-                if (elements.navigationRail) elements.navigationRail.value = 'recent';
-                handleNavigationChange({ target: { value: 'recent' } });
-                searchAndAddToHistory(word);
+            
+            listItem.addEventListener('click', (e) => {
+                if (e.target.closest('.mdui-icon')) {
+                    // Delete icon clicked
+                    window.removeFromHistory(word);
+                } else {
+                    // List item clicked
+                    if (elements.wordInput) elements.wordInput.value = word;
+                    if (elements.navigationRail) elements.navigationRail.value = 'recent';
+                    handleNavigationChange({ target: { value: 'recent' } });
+                    searchAndAddToHistory(word);
+                }
             });
+            
             elements.historyList.appendChild(listItem);
         });
     }
