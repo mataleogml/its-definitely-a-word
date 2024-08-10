@@ -10,12 +10,19 @@ const elements = {
     mainTitle: document.getElementById('mainTitle'),
     scoreCard: document.getElementById('scoreCard'),
     relatedWords: document.getElementById('relatedWords'),
-    wordInput: document.getElementById('wordInput')
+    wordInput: document.getElementById('wordInput'),
+    dictionarySelection: document.getElementById('dictionarySelection'),
+    debugToggle: document.getElementById('debugToggle'),
+    bullshitToggle: document.getElementById('bullshitToggle'),
+    apiKeyInput: document.getElementById('apiKeyInput'),
+    saveApiKeyButton: document.getElementById('saveApiKeyButton'),
+    apiKeyBadge: document.getElementById('apiKeyBadge')
+
 };
 let isDebugMode = localStorage.getItem('debugMode') === 'true';
 let isBullshitMode = localStorage.getItem('bullshitMode') === 'true';
+let selectedDictionary = localStorage.getItem('selectedDictionary') || 'scrabble-us';
 
-// Initialize
 (async function init() {
     await Promise.all([fetchDictionary(), fetchMeaningData()]);
     addEventListeners();
@@ -25,17 +32,24 @@ let isBullshitMode = localStorage.getItem('bullshitMode') === 'true';
 function addEventListeners() {
     document.getElementById('searchButton').addEventListener('click', searchWord);
     elements.wordInput.addEventListener('keyup', e => e.key === 'Enter' && searchWord());
-    document.getElementById('debugToggle').addEventListener('change', e => toggleMode('debugMode', e.target.checked));
-    document.getElementById('bullshitToggle').addEventListener('change', e => toggleMode('bullshitMode', e.target.checked));
+    elements.debugToggle.addEventListener('change', e => toggleMode('debugMode', e.target.checked));
+    elements.bullshitToggle.addEventListener('change', e => {
+        toggleMode('bullshitMode', e.target.checked);
+        updateApiKeyUI();
+    });
     document.getElementById('settingsButton').addEventListener('click', () => elements.settingsDialog.open = true);
     document.getElementById('closeDialogButton').addEventListener('click', () => elements.settingsDialog.open = false);
-    document.getElementById('saveApiKeyButton').addEventListener('click', saveApiKey);
+    elements.saveApiKeyButton.addEventListener('click', saveApiKey);
+    elements.apiKeyInput.addEventListener('input', updateSaveButtonState);
+    elements.dictionarySelection.addEventListener('change', updateDictionarySelection);
 }
 
 function initializeSettings() {
-    document.getElementById('debugToggle').checked = isDebugMode;
-    document.getElementById('bullshitToggle').checked = isBullshitMode;
+    elements.debugToggle.checked = isDebugMode;
+    elements.bullshitToggle.checked = isBullshitMode;
     elements.debugLogs.style.display = isDebugMode ? 'block' : 'none';
+    elements.dictionarySelection.value = selectedDictionary;
+    updateApiKeyUI();
 }
 
 function log(message) {
@@ -51,8 +65,27 @@ function toggleMode(mode, value) {
     if (mode === 'debugMode') isDebugMode = value;
     else if (mode === 'bullshitMode') isBullshitMode = value;
     localStorage.setItem(mode, value);
-    elements.debugLogs.style.display = isDebugMode ? 'block' : 'none';
+    if (mode === 'debugMode') {
+        elements.debugLogs.style.display = isDebugMode ? 'block' : 'none';
+    }
     log(`${mode} ${value ? 'enabled' : 'disabled'}`);
+}
+
+function updateApiKeyUI() {
+    elements.apiKeyInput.disabled = !isBullshitMode;
+    elements.saveApiKeyButton.disabled = !isBullshitMode || !elements.apiKeyInput.value;
+    elements.apiKeyBadge.style.display = apiKey ? 'inline-block' : 'none';
+}
+
+function updateSaveButtonState() {
+    elements.saveApiKeyButton.disabled = !isBullshitMode || !elements.apiKeyInput.value || elements.apiKeyInput.value === apiKey;
+}
+
+async function updateDictionarySelection() {
+    selectedDictionary = elements.dictionarySelection.value;
+    localStorage.setItem('selectedDictionary', selectedDictionary);
+    log(`Dictionary changed to: ${selectedDictionary}`);
+    await fetchDictionary();
 }
 
 async function fetchData(url, errorMessage) {
@@ -68,8 +101,10 @@ async function fetchData(url, errorMessage) {
 }
 
 async function fetchDictionary() {
-    const text = await fetchData('dictionary.txt', 'Failed to load dictionary. Some features may not work correctly.');
+    const dictionaryFile = selectedDictionary === 'scrabble-uk' ? 'dictionaryUK.txt' : 'dictionaryUS.txt';
+    const text = await fetchData(`/dictionary/${dictionaryFile}`, 'Failed to load dictionary. Some features may not work correctly.');
     if (text) {
+        dictionary.clear();
         text.split('\n').forEach(word => dictionary.add(word.trim().toLowerCase()));
         log(`Dictionary loaded successfully. Total words: ${dictionary.size}`);
     }
@@ -128,11 +163,12 @@ async function lookupWord(word) {
 
     let definition;
     if (dictionary.has(word.toLowerCase())) {
-        log('Word found in Scrabble dictionary.');
+
+        log('Word found in selected Scrabble dictionary.');
         definition = meaningData[word.toUpperCase()] || generateRelatedWords(word);
     } else {
-        log('Word not found in dictionary.');
-        definition = { error: `"${word}" is not a word.` };
+        log('Word not found in selected dictionary.');
+        definition = { error: `"${word}" is not a word in the selected Scrabble dictionary.` };
     }
 
     if (isBullshitMode && (!definition || definition.error)) {
@@ -211,10 +247,10 @@ async function getGPT4Definition(word) {
 
 function displayDefinition(data, originalWord) {
     log(`Displaying definition for "${originalWord}": ${JSON.stringify(data)}`);
-
+    
     if (dictionary.has(originalWord.toLowerCase())) {
-        const score = originalWord.toLowerCase().split('').reduce((score, letter) =>
-            score + ({ 'a': 1, 'e': 1, 'i': 1, 'o': 1, 'u': 1, 'l': 1, 'n': 1, 's': 1, 't': 1, 'r': 1, 'd': 2, 'g': 2, 'b': 3, 'c': 3, 'm': 3, 'p': 3, 'f': 4, 'h': 4, 'v': 4, 'w': 4, 'y': 4, 'k': 5, 'j': 8, 'x': 8, 'q': 10, 'z': 10 }[letter] || 0), 0);
+        const score = originalWord.toLowerCase().split('').reduce((score, letter) => 
+            score + ({'a':1,'e':1,'i':1,'o':1,'u':1,'l':1,'n':1,'s':1,'t':1,'r':1,'d':2,'g':2,'b':3,'c':3,'m':3,'p':3,'f':4,'h':4,'v':4,'w':4,'y':4,'k':5,'j':8,'x':8,'q':10,'z':10}[letter] || 0), 0);
         elements.scoreCard.innerHTML = `<h1>${score} points</h1>`;
         elements.scoreCard.style.display = 'block';
     } else {
@@ -243,7 +279,9 @@ function displayDefinition(data, originalWord) {
         const validWords = Array.from(uniqueWords)
             .filter(word => dictionary.has(word) && word !== originalWord.toLowerCase())
             .sort((a, b) => a.localeCompare(b));
-        return validWords.map(word =>
+
+        return validWords.map(word => 
+
             `<mdui-chip class="word-chip" onclick="lookupWordAndClearSuggestions('${word}')">${toSentenceCase(word)}</mdui-chip>`
         ).join(' ');
     };
@@ -280,11 +318,12 @@ function lookupWordAndClearSuggestions(word) {
 }
 
 function saveApiKey() {
-    const inputApiKey = document.getElementById('apiKeyInput').value;
+    const inputApiKey = elements.apiKeyInput.value;
     if (inputApiKey) {
         apiKey = inputApiKey;
         localStorage.setItem('gpt4ApiKey', apiKey);
         elements.settingsDialog.open = false;
+        updateApiKeyUI();
         log('API Key saved successfully');
         mdui.snackbar({ message: 'API Key saved successfully!', timeout: 2000 });
     } else {
