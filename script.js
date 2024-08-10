@@ -17,7 +17,6 @@ const elements = {
     apiKeyInput: document.getElementById('apiKeyInput'),
     saveApiKeyButton: document.getElementById('saveApiKeyButton'),
     apiKeyBadge: document.getElementById('apiKeyBadge')
-
 };
 let isDebugMode = localStorage.getItem('debugMode') === 'true';
 let isBullshitMode = localStorage.getItem('bullshitMode') === 'true';
@@ -163,7 +162,6 @@ async function lookupWord(word) {
 
     let definition;
     if (dictionary.has(word.toLowerCase())) {
-
         log('Word found in selected Scrabble dictionary.');
         definition = meaningData[word.toUpperCase()] || generateRelatedWords(word);
     } else {
@@ -279,9 +277,7 @@ function displayDefinition(data, originalWord) {
         const validWords = Array.from(uniqueWords)
             .filter(word => dictionary.has(word) && word !== originalWord.toLowerCase())
             .sort((a, b) => a.localeCompare(b));
-
         return validWords.map(word => 
-
             `<mdui-chip class="word-chip" onclick="lookupWordAndClearSuggestions('${word}')">${toSentenceCase(word)}</mdui-chip>`
         ).join(' ');
     };
