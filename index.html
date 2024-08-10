@@ -9,14 +9,6 @@
     <script src="https://unpkg.com/mdui@2/mdui.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.3.4/axios.min.js"></script>
     <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-        }
-
         .container {
             width: 80%;
             max-width: 600px;
@@ -74,49 +66,68 @@
 </head>
 
 <body>
-    <div class="container">
-        <div>
-            <h1 id="mainTitle">Is it really a word?</h1>
-        </div>
+    <mdui-layout>
+<mdui-top-app-bar style="position: relative;">
+  <mdui-button-icon icon="menu">O</mdui-button-icon>
+  <mdui-top-app-bar-title>Its Definitely a Word</mdui-top-app-bar-title>
+  <div style="flex-grow: 1"></div>
+  <mdui-button-icon icon="more_vert">O</i></mdui-button-icon>
+</mdui-top-app-bar>
 
-        <mdui-text-field id="wordInput" clearable label="Enter a word (max 15 letters, use ? for wildcards)"
-            value=""></mdui-text-field>
-        <div class="button-container">
-            <mdui-button id="searchButton" variant="filled">Search</mdui-button>
-            <mdui-button id="settingsButton" variant="text">Settings</mdui-button>
-        </div>
+        <mdui-navigation-drawer open class="example-navigation-drawer">
+            <mdui-list>
+                <mdui-list-item>Word Finder</mdui-list-item>
+                <mdui-list-item>Word Finder</mdui-list-item>
+                <mdui-list-item>Word Finder</mdui-list-item>
 
-        <div id="suggestions"></div>
+            </mdui-list>
+        </mdui-navigation-drawer>
 
-        <div id="loadingIndicator">
-            <mdui-circular-progress></mdui-circular-progress>
-        </div>
+        <mdui-layout-main class="example-layout-main" style="min-height: 300px">
+            <div class="container">
+                <div>
+                    <h1 id="mainTitle">Is it really a word?</h1>
+                </div>
 
-        <mdui-card variant="elevated" id="scoreCard" class="mdui-typo"></mdui-card>
-        <mdui-card variant="elevated" id="result" class="mdui-typo"></mdui-card>
-        <mdui-card variant="elevated" id="relatedWords" class="mdui-typo"></mdui-card>
-        <mdui-card variant="elevated" id="synonyms" class="mdui-typo"></mdui-card>
-        <mdui-card variant="elevated" id="debugLogs"></mdui-card>
-    </div>
+                <mdui-text-field id="wordInput" clearable label="Enter a word (max 15 letters, use ? for wildcards)"
+                    value=""></mdui-text-field>
+                <div class="button-container">
+                    <mdui-button id="searchButton" variant="filled">Search</mdui-button>
+                    <mdui-button id="settingsButton" variant="text">Settings</mdui-button>
+                </div>
 
-    <mdui-dialog id="settingsDialog">
-        <div style="padding: 10px;">
-            <h2>Settings</h2>
-            <h3>API Key</h3>
-            <mdui-text-field id="apiKeyInput" type="password" label="Enter your API Key"></mdui-text-field>
-            <div class="button-container">
-                <mdui-button id="saveApiKeyButton" variant="filled">Save</mdui-button>
+                <div id="suggestions"></div>
+
+                <div id="loadingIndicator">
+                    <mdui-circular-progress></mdui-circular-progress>
+                </div>
+
+                <mdui-card variant="elevated" id="scoreCard" class="mdui-typo"></mdui-card>
+                <mdui-card variant="elevated" id="result" class="mdui-typo"></mdui-card>
+                <mdui-card variant="elevated" id="relatedWords" class="mdui-typo"></mdui-card>
+                <mdui-card variant="elevated" id="synonyms" class="mdui-typo"></mdui-card>
+                <mdui-card variant="elevated" id="debugLogs"></mdui-card>
             </div>
-            <h3>Toggle Debug Mode</h3>
-            <mdui-checkbox id="debugToggle" style="margin-bottom: 30px">Debug Mode</mdui-checkbox>
-            <h3>Toggle Bullshit Mode</h3>
-            <mdui-checkbox id="bullshitToggle" style="margin-bottom: 30px">Bullshit Mode</mdui-checkbox>
-            <br>
-            <mdui-button full-width id="closeDialogButton" variant="tonal">Close Settings</mdui-button>
-        </div>
-    </mdui-dialog>
 
-    <script src="script.js"></script>
+            <mdui-dialog id="settingsDialog">
+                <div style="padding: 10px;">
+                    <h2>Settings</h2>
+                    <h3>API Key</h3>
+                    <mdui-text-field id="apiKeyInput" type="password" label="Enter your API Key"></mdui-text-field>
+                    <div class="button-container">
+                        <mdui-button id="saveApiKeyButton" variant="filled">Save</mdui-button>
+                    </div>
+                    <h3>Toggle Debug Mode</h3>
+                    <mdui-checkbox id="debugToggle" style="margin-bottom: 30px">Debug Mode</mdui-checkbox>
+                    <h3>Toggle Bullshit Mode</h3>
+                    <mdui-checkbox id="bullshitToggle" style="margin-bottom: 30px">Bullshit Mode</mdui-checkbox>
+                    <br>
+                    <mdui-button full-width id="closeDialogButton" variant="tonal">Close Settings</mdui-button>
+                </div>
+            </mdui-dialog>
+
+        </mdui-layout-main>
+        <script src="script.js"></script>
 </body>
 
 </html>
