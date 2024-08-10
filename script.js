@@ -101,7 +101,7 @@ async function fetchData(url, errorMessage) {
 
 async function fetchDictionary() {
     const dictionaryFile = selectedDictionary === 'scrabble-uk' ? 'dictionaryUK.txt' : 'dictionaryUS.txt';
-    const text = await fetchData(`${dictionaryFile}`, 'Failed to load dictionary. Some features may not work correctly.');
+    const text = await fetchData(`https://mataleogml.github.io/its-definitely-a-word/${dictionaryFile}`, 'Failed to load dictionary. Some features may not work correctly.');
     if (text) {
         dictionary.clear();
         text.split('\n').forEach(word => dictionary.add(word.trim().toLowerCase()));
