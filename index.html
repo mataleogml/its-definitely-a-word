@@ -106,24 +106,94 @@
             justify-content: flex-end;
             padding: 8px 16px;
         }
+
+        /* Common styles for both navigations */
+        #desktop-nav,
+        #mobile-nav {
+            position: fixed;
+            z-index: 1000;
+        }
+
+        /* Desktop Navigation */
+        #desktop-nav {
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 80px;
+            /* Adjust based on your navigation rail width */
+        }
+
+        /* Mobile Navigation */
+        #mobile-nav {
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            /* Adjust based on your navigation bar height */
+        }
+
+        /* Adjust main content area */
+        mdui-layout-main {
+            min-height: 100vh;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Media query for mobile view */
+        @media (max-width: 599px) {
+            #desktop-nav {
+                display: none;
+            }
+
+            mdui-layout-main {
+                padding-bottom: 56px;
+                /* Height of the mobile navigation bar */
+            }
+        }
+
+        /* Media query for desktop view */
+        @media (min-width: 600px) {
+            #mobile-nav {
+                display: none;
+            }
+
+            mdui-layout-main {
+                padding-left: 80px;
+                /* Width of the desktop navigation rail */
+            }
+        }
     </style>
 </head>
 
 <body>
     <mdui-layout>
-        <mdui-navigation-rail style="position: absolute">
+        <!-- Desktop/Tablet Navigation -->
+        <mdui-navigation-rail id="desktop-nav" style="position: absolute">
             <mdui-navigation-rail-item icon="book--outlined" value="recent">Dictionary</mdui-navigation-rail-item>
             <mdui-navigation-rail-item icon="watch_later--outlined" value="history">History</mdui-navigation-rail-item>
             <mdui-navigation-rail-item icon="settings--outlined" value="settings">Settings</mdui-navigation-rail-item>
         </mdui-navigation-rail>
+
+        <!-- Mobile Navigation -->
+        <mdui-navigation-bar id="mobile-nav" value="recent" label-visibility="auto"
+            style="position: absolute; right: 0px; bottom: 0px; left: 0px;">
+            <mdui-navigation-bar-item icon="book--outlined" value="recent"
+                tabindex="0">Dictionary</mdui-navigation-bar-item>
+            <mdui-navigation-bar-item icon="watch_later--outlined" value="history"
+                tabindex="0">History</mdui-navigation-bar-item>
+            <mdui-navigation-bar-item icon="settings--outlined" value="settings"
+                tabindex="0">Settings</mdui-navigation-bar-item>
+        </mdui-navigation-bar>
 
         <mdui-layout-main class="layout-main" style="min-height: 100dvh">
 
 
             <div id="dictionaryPage" class="container">
                 <h1 id="mainTitle">Is it really a word?</h1>
-                
-                <mdui-text-field icon="search" id="wordInput" helper="Enter a word (max 15 letters, use ? for wildcards)" clearable label="Enter a word" value=""></mdui-text-field>
+
+                <mdui-text-field icon="search" id="wordInput"
+                    helper="Enter a word (max 15 letters, use ? for wildcards)" clearable label="Enter a word"
+                    value=""></mdui-text-field>
                 <!---<div class="button-container"><mdui-button id="searchButton" variant="filled">Search</mdui-button></div>--->
 
                 <div id="suggestions"></div>
@@ -144,26 +214,51 @@
 
             <div id="settingsPage" class="container" style="display: none;">
                 <h1 slot="headline">Settings</h2>
-                <h3>Dictionary Selection</h3>
-                <mdui-segmented-button-group id="dictionarySelection" selects="single" value="scrabble-us">
-                    <mdui-segmented-button value="scrabble-us">Scrabble US (TWL)</mdui-segmented-button>
-                    <mdui-segmented-button value="scrabble-uk">Scrabble UK (Collins/SOWPODS)</mdui-segmented-button>
-                </mdui-segmented-button-group>
+                    <h3>Dictionary Selection</h3>
+                    <mdui-segmented-button-group id="dictionarySelection" selects="single" value="scrabble-us">
+                        <mdui-segmented-button value="scrabble-us">Scrabble US (TWL)</mdui-segmented-button>
+                        <mdui-segmented-button value="scrabble-uk">Scrabble UK (Collins/SOWPODS)</mdui-segmented-button>
+                    </mdui-segmented-button-group>
 
-                <h3>Debug Mode</h3>
-                <mdui-switch id="debugToggle"></mdui-switch>
+                    <h3>Debug Mode</h3>
+                    <mdui-switch id="debugToggle"></mdui-switch>
 
-                <h3>Bullshit Mode</h3>
-                <mdui-switch id="bullshitToggle"></mdui-switch>
+                    <h3>Bullshit Mode</h3>
+                    <mdui-switch id="bullshitToggle"></mdui-switch>
 
-                <h4>API Key <mdui-badge id="apiKeyBadge">Active Key</mdui-badge></h4>
-                <mdui-text-field id="apiKeyInput" label="Enter API Key"></mdui-text-field>
-                <mdui-button id="saveApiKeyButton">Save</mdui-button>
+                    <h4>API Key <mdui-badge id="apiKeyBadge">Active Key</mdui-badge></h4>
+                    <mdui-text-field id="apiKeyInput" label="Enter API Key"></mdui-text-field>
+                    <mdui-button id="saveApiKeyButton">Save</mdui-button>
             </div>
 
+            <script>
+                // Handle navigation changes for both desktop and mobile
+                document.addEventListener('DOMContentLoaded', () => {
+                    const desktopNav = document.querySelector('#desktop-nav');
+                    const mobileNav = document.querySelector('#mobile-nav');
+                    const pages = {
+                        recent: document.querySelector('#dictionaryPage'),
+                        history: document.querySelector('#historyPage'),
+                        settings: document.querySelector('#settingsPage')
+                    };
 
-            <script type="module" src="https://mataleogml.github.io/its-definitely-a-word/scripts/api.js"></script>
-            <script type="module" src="https://mataleogml.github.io/its-definitely-a-word/scripts/interface.js"></script>
+                    function handleNavChange(event) {
+                        const selectedValue = event.target.value;
+                        Object.entries(pages).forEach(([key, page]) => {
+                            if (page) {
+                                page.style.display = key === selectedValue ? 'block' : 'none';
+                            }
+                        });
+                    }
+
+                    desktopNav.addEventListener('change', handleNavChange);
+                    mobileNav.addEventListener('change', handleNavChange);
+                });
+            </script>
+
+            <!--<script type="module" src="https://mataleogml.github.io/its-definitely-a-word/scripts/api.js"></script>-->
+            <script type="module"
+                src="https://mataleogml.github.io/its-definitely-a-word/scripts/interface.js"></script>
             <script type="module" src="https://mataleogml.github.io/its-definitely-a-word/scripts/script.js"></script>
             <script type="module" src="https://mataleogml.github.io/its-definitely-a-word/scripts/history.js"></script>
 
